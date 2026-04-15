@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SOL Memecoin Trading System v1</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --bg2: #111118;
+    --bg3: #1a1a24;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.12);
+    --accent: #9945FF;
+    --accent2: #14F195;
+    --accent3: #FF6B35;
+    --text: #e8e8f0;
+    --muted: #6b6b80;
+    --danger: #FF4545;
+    --warn: #FFB800;
+    --mono: 'JetBrains Mono', monospace;
+    --head: 'Syne', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--mono); font-size: 13px; min-height: 100vh; line-height: 1.6; }
+  .header { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+  .logo { font-family: var(--head); font-size: 18px; font-weight: 800; letter-spacing: -0.5px; display: flex; align-items: center; gap: 10px; }
+  .logo-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent2); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  .badge { font-size: 10px; padding: 3px 8px; border-radius: 4px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; }
+  .badge-sol { background: rgba(153,69,255,0.2); color: var(--accent); border: 1px solid rgba(153,69,255,0.3); }
+  .badge-mode { font-size: 10px; padding: 3px 8px; border-radius: 4px; font-weight: 600; letter-spacing: 0.5px; }
+  .badge-planning { background: rgba(20,241,149,0.15); color: var(--accent2); border: 1px solid rgba(20,241,149,0.25); }
+  .badge-mgmt { background: rgba(255,107,53,0.15); color: var(--accent3); border: 1px solid rgba(255,107,53,0.25); }
+  .container { padding: 20px 24px; max-width: 1100px; }
+  .inputs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+  @media (max-width: 600px) { .inputs-grid { grid-template-columns: 1fr; } }
+  .input-group { display: flex; flex-direction: column; gap: 6px; }
+  .input-group.full { grid-column: 1 / -1; }
+  label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); font-weight: 600; }
+  input { background: var(--bg2); border: 1px solid var(--border2); color: var(--text); font-family: var(--mono); font-size: 12px; padding: 10px 12px; border-radius: 6px; outline: none; transition: border-color 0.2s; width: 100%; }
+  input:focus { border-color: var(--accent); }
+  input::placeholder { color: var(--muted); }
+  .section-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); margin: 16px 0 10px; display: flex; align-items: center; gap: 8px; }
+  .section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+  .btn-execute { width: 100%; padding: 14px; background: linear-gradient(135deg, var(--accent), #7b2fff); color: white; font-family: var(--head); font-size: 15px; font-weight: 700; letter-spacing: 0.5px; border: none; border-radius: 8px; cursor: pointer; margin-top: 8px; transition: opacity 0.2s, transform 0.1s; }
+  .btn-execute:hover { opacity: 0.9; }
+  .btn-execute:active { transform: scale(0.99); }
+  .btn-execute:disabled { opacity: 0.5; cursor: not-allowed; }
+  .output-panel { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-top: 20px; display: none; }
+  .output-panel.visible { display: block; }
+  .panel-header { background: var(--bg3); border-bottom: 1px solid var(--border); padding: 12px 18px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+  .panel-title { font-family: var(--head); font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+  .output-content { padding: 18px; }
+  .cards-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px; }
+  @media (max-width: 600px) { .cards-row { grid-template-columns: 1fr 1fr; } }
+  .stat-card { background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }
+  .stat-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 4px; }
+  .stat-value { font-size: 15px; font-weight: 600; }
+  .green { color: var(--accent2); }
+  .red { color: var(--danger); }
+  .purple { color: var(--accent); }
+  .orange { color: var(--accent3); }
+  .warn { color: var(--warn); }
+  .tech-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px; }
+  @media (max-width: 600px) { .tech-row { grid-template-columns: 1fr; } }
+  .tech-card { background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 14px; }
+  .tech-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; font-weight: 600; }
+  .tech-main { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+  .tech-sub { font-size: 11px; color: var(--muted); }
+  .rsi-bar-wrap { height: 5px; background: var(--bg); border-radius: 3px; margin: 8px 0 4px; overflow: hidden; }
+  .rsi-bar { height: 100%; border-radius: 3px; }
+  .bb-zone { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
+  .bb-line { display: flex; justify-content: space-between; font-size: 11px; }
+  .bb-line span:first-child { color: var(--muted); }
+  .classify-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px; }
+  @media (max-width: 600px) { .classify-row { grid-column: 1fr 1fr; } }
+  .classify-card { background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; text-align: center; }
+  .clabel { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 5px; }
+  .cval { font-size: 12px; font-weight: 600; }
+  .entry-highlight { background: rgba(153,69,255,0.1); border: 1px solid rgba(153,69,255,0.3); border-radius: 8px; padding: 14px 18px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+  .entry-elabel { font-size: 10px; color: var(--accent); text-transform: uppercase; letter-spacing: 1px; font-weight: 600; margin-bottom: 4px; }
+  .entry-note { font-size: 11px; color: var(--muted); }
+  .entry-val { font-size: 24px; font-weight: 800; color: var(--accent); font-family: var(--head); }
+  .tp-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 12px; }
+  .tp-table th { background: var(--bg3); border: 1px solid var(--border); padding: 8px 12px; text-align: left; font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; font-weight: 600; }
+  .tp-table td { border: 1px solid var(--border); padding: 10px 12px; }
+  .tp-table tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
+  .moon-row td { background: rgba(153,69,255,0.05) !important; }
+  .rules-block { background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; margin-bottom: 12px; }
+  .rules-title { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 10px; font-weight: 600; }
+  .rule-item { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 7px; font-size: 12px; line-height: 1.5; }
+  .rule-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); margin-top: 6px; flex-shrink: 0; }
+  .rule-dot.red { background: var(--danger); }
+  .rule-dot.green { background: var(--accent2); }
+  .rule-dot.warn { background: var(--warn); }
+  .verdict-box { background: rgba(153,69,255,0.08); border: 1px solid rgba(153,69,255,0.25); border-radius: 8px; padding: 16px 18px; }
+  .verdict-title { font-size: 10px; color: var(--accent); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 10px; font-weight: 600; }
+  .verdict-text { font-size: 13px; line-height: 1.7; font-family: var(--head); font-weight: 600; }
+  .loading-bar { display: none; background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 28px 24px; text-align: center; margin-top: 20px; }
+  .loading-bar.visible { display: block; }
+  .loading-msg { color: var(--muted); font-size: 12px; animation: blink 1.2s infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  .loader { width: 32px; height: 32px; border: 2px solid var(--border2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 14px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .error-box { background: rgba(255,69,69,0.08); border: 1px solid rgba(255,69,69,0.25); border-radius: 8px; padding: 14px 16px; color: var(--danger); font-size: 12px; margin-top: 16px; display: none; }
+  .error-box.visible { display: block; }
+  .divider { height: 1px; background: var(--border); margin: 12px 0; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">
+    <div class="logo-dot"></div>
+    SOL TRADING SYSTEM v1
+  </div>
+  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+    <span class="badge badge-sol">SOLANA</span>
+    <span id="mode-badge" class="badge-mode badge-planning">TRADE PLANNING</span>
+  </div>
+</div>
+
+<div class="container">
+
+  <div class="section-label">Required Inputs</div>
+  <div class="inputs-grid">
+    <div class="input-group full">
+      <label>Token Mint Address or Pair Address</label>
+      <input type="text" id="contract" placeholder="e.g. BFiGUxnidogqcZAPVPDZRCfhx3nXnFLYqpQUaUGpump" />
+    </div>
+    <div class="input-group">
+      <label>Total Capital (USD)</label>
+      <input type="number" id="capital" value="500" />
+    </div>
+    <div class="input-group">
+      <label>Risk per Trade (%)</label>
+      <input type="number" id="risk" value="2" />
+    </div>
+  </div>
+
+  <div class="section-label">Trade Management — Optional</div>
+  <div class="inputs-grid">
+    <div class="input-group">
+      <label>Entry Price (USD) — fill if already in trade</label>
+      <input type="number" id="entry" placeholder="Leave blank = Planning mode" step="any" />
+    </div>
+    <div class="input-group">
+      <label>Capital Used (USD)</label>
+      <input type="number" id="capital_used" placeholder="Leave blank = Planning mode" step="any" />
+    </div>
+  </div>
+
+  <button class="btn-execute" id="execBtn" onclick="execute()">⚡ EXECUTE ANALYSIS</button>
+  <div class="error-box" id="errorBox"></div>
+
+  <div class="loading-bar" id="loadingBar">
+    <div class="loader"></div>
+    <div class="loading-msg" id="loadingMsg">Fetching on-chain data...</div>
+  </div>
+
+  <div class="output-panel" id="outputPanel">
+    <div class="panel-header">
+      <div class="panel-title">
+        <span id="tokenName">—</span>
+        <span id="modeLabel" style="font-size:11px;font-weight:400;color:var(--muted)"></span>
+      </div>
+      <div style="font-size:11px;color:var(--muted)" id="pairAge"></div>
+    </div>
+    <div class="output-content">
+
+      <div class="section-label">1 — Token Snapshot</div>
+      <div class="cards-row" id="snapshotRow"></div>
+
+      <div class="section-label">2 — Technical State</div>
+      <div class="tech-row" id="techRow"></div>
+
+      <div class="section-label">3 — Trade Classification</div>
+      <div class="classify-row" id="classifyRow"></div>
+
+      <div class="section-label">4 — Position Details</div>
+      <div class="entry-highlight">
+        <div>
+          <div class="entry-elabel" id="entryModeLabel">Suggested Entry</div>
+          <div class="entry-note" id="entryNote">Structure-based — not current price</div>
+        </div>
+        <div class="entry-val" id="entryPriceVal">—</div>
+      </div>
+      <div class="cards-row" id="positionRow"></div>
+
+      <div class="section-label">5 — Take Profit Ladder</div>
+      <table class="tp-table">
+        <thead>
+          <tr>
+            <th>Level</th>
+            <th>Price</th>
+            <th>% of Position</th>
+            <th>Tokens Sold</th>
+            <th>USD Returned</th>
+            <th>Profit (USD)</th>
+          </tr>
+        </thead>
+        <tbody id="tpBody"></tbody>
+      </table>
+
+      <div class="section-label">6 — Execution Rules</div>
+      <div id="rulesBlock"></div>
+
+      <div class="section-label">7 — Re-Entry Plan</div>
+      <div id="reentryBlock"></div>
+
+      <div class="section-label">8 — Final Verdict</div>
+      <div class="verdict-box">
+        <div class="verdict-title">⚡ AI Verdict</div>
+        <div class="verdict-text" id="verdictText">—</div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+async function fetchDexData(address) {
+  let res = await fetch("https://api.dexscreener.com/latest/dex/tokens/" + address);
+  if (res.ok) {
+    const json = await res.json();
+    if (json.pairs && json.pairs.length > 0) {
+      const sol = json.pairs.filter(p => p.chainId === "solana");
+      if (sol.length > 0) { sol.sort((a,b) => (b.liquidity?.usd||0)-(a.liquidity?.usd||0)); return sol[0]; }
+      return json.pairs[0];
+    }
+  }
+  res = await fetch("https://api.dexscreener.com/latest/dex/pairs/solana/" + address);
+  if (!res.ok) throw new Error("Dexscreener API error: " + res.status);
+  const json = await res.json();
+  if (!json.pairs || !json.pairs.length) throw new Error("No pair found. Use a valid Solana mint or pair address.");
+  return json.pairs[0];
+}
+
+function fmtPrice(n) {
+  if (!n && n !== 0) return "—";
+  if (n < 0.000001) return "$" + n.toExponential(4);
+  if (n < 0.01) return "$" + n.toFixed(8);
+  if (n < 1) return "$" + n.toFixed(6);
+  return "$" + n.toFixed(4);
+}
+function fmt(n) {
+  if (!n) return "—";
+  if (n >= 1e9) return "$" + (n/1e9).toFixed(2) + "B";
+  if (n >= 1e6) return "$" + (n/1e6).toFixed(2) + "M";
+  if (n >= 1e3) return "$" + (n/1e3).toFixed(2) + "K";
+  return "$" + n.toFixed(2);
+}
+function sc(label, value, cls="") {
+  return `<div class="stat-card"><div class="stat-label">${label}</div><div class="stat-value ${cls}">${value}</div></div>`;
+}
+function cc(label, val, cls="") {
+  return `<div class="classify-card"><div class="clabel">${label}</div><div class="cval ${cls}">${val}</div></div>`;
+}
+function ri(text, cls="") {
+  return `<div class="rule-item"><div class="rule-dot ${cls}"></div><span>${text}</span></div>`;
+}
+
+function estimateRSI(h1, h24) {
+  const m = (h1 * 2.5) + (h24 * 0.4);
+  return Math.round(Math.max(10, Math.min(90, 50 + m * 0.35)));
+}
+function rsiMeta(rsi) {
+  if (rsi > 70) return { label: "OVERBOUGHT", color: "#FF4545" };
+  if (rsi < 30) return { label: "OVERSOLD", color: "#14F195" };
+  if (rsi > 60) return { label: "BULLISH", color: "#FF6B35" };
+  if (rsi < 40) return { label: "BEARISH", color: "#FF4545" };
+  return { label: "NEUTRAL", color: "#FFB800" };
+}
+function estimateBB(price, h1, h24) {
+  const vol = Math.abs(h1) * 0.6 + Math.abs(h24) * 0.25;
+  const spread = price * (Math.max(vol, 2) / 100) * 1.4;
+  const upper = price + spread;
+  const lower = price - spread;
+  const mid = price;
+  const squeeze = vol < 4;
+  const rangeSize = upper - lower;
+  let pos, posLabel;
+  if (rangeSize === 0) { pos = "mid"; posLabel = "NEAR MID BAND"; }
+  else {
+    const rel = (price - lower) / rangeSize;
+    if (rel > 0.72) { pos = "upper"; posLabel = "NEAR UPPER BAND"; }
+    else if (rel < 0.28) { pos = "lower"; posLabel = "NEAR LOWER BAND"; }
+    else { pos = "mid"; posLabel = "NEAR MID BAND"; }
+  }
+  return { upper, lower, mid, pos, posLabel, squeeze, vol };
+}
+
+function setLoading(msg) {
+  document.getElementById("loadingMsg").textContent = msg;
+  document.getElementById("loadingBar").classList.add("visible");
+  document.getElementById("outputPanel").classList.remove("visible");
+  document.getElementById("errorBox").classList.remove("visible");
+}
+function setError(msg) {
+  document.getElementById("loadingBar").classList.remove("visible");
+  document.getElementById("errorBox").textContent = "⚠ " + msg;
+  document.getElementById("errorBox").classList.add("visible");
+}
+
+async function callClaude(prompt) {
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 1000,
+      messages: [{ role: "user", content: prompt }]
+    })
+  });
+  const d = await res.json();
+  return d.content.map(b => b.text || "").join("");
+}
+
+async function execute() {
+  const contract = document.getElementById("contract").value.trim();
+  const capital = parseFloat(document.getElementById("capital").value);
+  const riskPct = parseFloat(document.getElementById("risk").value);
+  const entryIn = document.getElementById("entry").value.trim();
+  const capUsedIn = document.getElementById("capital_used").value.trim();
+
+  if (!contract) { setError("Contract address is required."); return; }
+  if (!capital || !riskPct) { setError("Capital and Risk % are required."); return; }
+
+  const isMgmt = entryIn !== "" && capUsedIn !== "";
+  const mode = isMgmt ? "TRADE MANAGEMENT" : "TRADE PLANNING";
+  document.getElementById("mode-badge").textContent = mode;
+  document.getElementById("mode-badge").className = "badge-mode " + (isMgmt ? "badge-mgmt" : "badge-planning");
+  document.getElementById("execBtn").disabled = true;
+
+  setLoading("Fetching on-chain data from Dexscreener...");
+  let pair;
+  try { pair = await fetchDexData(contract); }
+  catch(e) { setError(e.message); document.getElementById("execBtn").disabled = false; return; }
+
+  setLoading("Computing RSI + Bollinger Bands...");
+
+  const price = parseFloat(pair.priceUsd) || 0;
+  const fdv = pair.fdv || 0;
+  const liq = pair.liquidity?.usd || 0;
+  const vol24 = pair.volume?.h24 || 0;
+  const h1 = pair.priceChange?.h1 || 0;
+  const h24 = pair.priceChange?.h24 || 0;
+  const buys = pair.txns?.h24?.buys || 0;
+  const sells = pair.txns?.h24?.sells || 0;
+  const createdAt = pair.pairCreatedAt || 0;
+  const ageHours = createdAt ? (Date.now() - createdAt) / 3600000 : 0;
+  const tokenName = pair.baseToken?.symbol || "TOKEN";
+  const bsRatio = sells > 0 ? buys / sells : buys;
+  const volMcRatio = fdv > 0 ? vol24 / fdv : 0;
+  const liqRatio = fdv > 0 ? liq / fdv : 0;
+
+  const rsi = estimateRSI(h1, h24);
+  const rsiM = rsiMeta(rsi);
+  const bb = estimateBB(price, h1, h24);
+
+  const phase = ageHours < 12 ? "EARLY" : ageHours < 72 ? "MID" : "LATE";
+  const strategy = (h1 > 20 && bb.pos === "upper") ? "BREAKOUT"
+    : (h1 < 0 && h24 > 0) ? "PULLBACK"
+    : bb.squeeze ? "CHOP/SQUEEZE"
+    : "CHOP";
+  const riskLevel = liqRatio < 0.05 ? "HIGH" : liqRatio < 0.10 ? "MEDIUM" : "LOW";
+
+  // Smart entry — NOT current price
+  let suggestedEntry;
+  if (strategy === "BREAKOUT") suggestedEntry = price * 1.025;
+  else if (strategy === "PULLBACK") suggestedEntry = bb.mid * 0.982;
+  else suggestedEntry = bb.lower * 1.015;
+
+  const riskUsd = capital * (riskPct / 100);
+  let entry, sl, posSize, capUsed, riskExp;
+
+  if (isMgmt) {
+    entry = parseFloat(entryIn);
+    capUsed = parseFloat(capUsedIn);
+    posSize = capUsed / entry;
+    sl = entry * (strategy === "BREAKOUT" ? 0.85 : 0.88);
+    riskExp = (entry - sl) * posSize;
+  } else {
+    entry = suggestedEntry;
+    const slPct = strategy === "BREAKOUT" ? 0.85 : strategy === "PULLBACK" ? 0.90 : 0.87;
+    sl = entry * slPct;
+    const slDiff = entry - sl;
+    posSize = slDiff > 0 ? riskUsd / slDiff : 0;
+    capUsed = posSize * entry;
+    riskExp = riskUsd;
+  }
+
+  const tpDef = [
+    { label: "TP1", mult: 1.20, pct: 0.35 },
+    { label: "TP2", mult: 1.50, pct: 0.30 },
+    { label: "TP3", mult: 2.00, pct: 0.20 },
+    { label: "Moon Bag", mult: null, pct: 0.15 }
+  ];
+  const tps = tpDef.map(t => {
+    const tokens = posSize * t.pct;
+    if (!t.mult) return { ...t, tpPrice: null, tokens, usd: null, profit: null };
+    const tpPrice = entry * t.mult;
+    const usd = tokens * tpPrice;
+    const profit = usd - (tokens * entry);
+    return { ...t, tpPrice, tokens, usd, profit };
+  });
+
+  setLoading("Generating AI trade plan...");
+
+  const aiPrompt = `You are an elite crypto trading system for Solana memecoins. Return ONLY valid JSON — no markdown, no preamble, no trailing text.
+
+{
+  "verdict": "2-line max decisive verdict",
+  "entryConfirm1": "price behavior confirmation",
+  "entryConfirm2": "volume confirmation",
+  "entryConfirm3": "order flow / buy-sell pressure confirmation",
+  "slRule": "SL rule after TP1 is hit",
+  "exitTrigger1": "emergency exit condition 1",
+  "exitTrigger2": "emergency exit condition 2",
+  "fakeBreakout1": "fake breakout signal 1",
+  "fakeBreakout2": "fake breakout signal 2",
+  "fakeBreakout3": "fake breakout signal 3",
+  "reentrySupport": "next support zone description",
+  "reentryCondition": "precise re-entry condition"
+}
+
+Data:
+TOKEN=${tokenName} | MODE=${mode} | PHASE=${phase}(${ageHours.toFixed(1)}h)
+STRATEGY=${strategy} | RISK=${riskLevel}
+Price=${fmtPrice(price)} | FDV=${fmt(fdv)} | Liq=${fmt(liq)} | Vol24h=${fmt(vol24)}
+h1=${h1}% | h24=${h24}% | B/S=${bsRatio.toFixed(2)} | Vol/MC=${(volMcRatio*100).toFixed(1)}%
+RSI=${rsi}(${rsiM.label}) | BB=${bb.posLabel} | Volatility=${bb.squeeze?"SQUEEZING":"EXPANDING"}
+Entry=${fmtPrice(entry)} | SL=${fmtPrice(sl)} | Size=${posSize.toFixed(0)} tokens
+TP1=${fmtPrice(entry*1.2)} TP2=${fmtPrice(entry*1.5)} TP3=${fmtPrice(entry*2)}
+Capital=$${capital} | RiskUSD=$${riskUsd.toFixed(2)}`;
+
+  let ai = {};
+  try {
+    const raw = await callClaude(aiPrompt);
+    ai = JSON.parse(raw.replace(/```json|```/g,"").trim());
+  } catch(e) {
+    ai = {
+      verdict: `${tokenName} — ${strategy} detected (RSI ${rsi}: ${rsiM.label}). Enter at ${fmtPrice(entry)}, hard SL at ${fmtPrice(sl)}. Capital protection first.`,
+      entryConfirm1: `Price holds above ${fmtPrice(entry * 0.985)} for 2 consecutive candles`,
+      entryConfirm2: `Volume exceeds ${fmt(vol24/24)} per hour`,
+      entryConfirm3: `Buy/sell ratio sustains above 1.2 (now: ${bsRatio.toFixed(2)})`,
+      slRule: "Move SL to breakeven the moment TP1 is filled",
+      exitTrigger1: "Liquidity falls more than 20% in under 15 minutes",
+      exitTrigger2: "Buy/sell ratio collapses below 0.70 with rising volume",
+      fakeBreakout1: "Large upper wick that closes below the breakout candle open",
+      fakeBreakout2: "Volume spike that collapses within 2 candles — do not chase",
+      fakeBreakout3: "Price fails to hold breakout level after 15 minutes",
+      reentrySupport: fmtPrice(price * 0.80) + " — structural support zone",
+      reentryCondition: "Re-enter only on confirmed bounce with B/S ratio above 1.3"
+    };
+  }
+
+  // RENDER
+  document.getElementById("tokenName").textContent = tokenName;
+  document.getElementById("modeLabel").textContent = "/ " + mode;
+  document.getElementById("pairAge").textContent = ageHours > 0 ? `Age: ${ageHours.toFixed(1)}h` : "";
+
+  document.getElementById("snapshotRow").innerHTML =
+    sc("Price", fmtPrice(price), "purple") +
+    sc("FDV / Mkt Cap", fmt(fdv)) +
+    sc("Liquidity", fmt(liq)) +
+    sc("24h Volume", fmt(vol24)) +
+    sc("Buy/Sell Ratio", bsRatio.toFixed(2), bsRatio>=1.2?"green":bsRatio<0.8?"red":"warn") +
+    sc("1h Change", (h1>=0?"+":"")+h1.toFixed(2)+"%", h1>=0?"green":"red");
+
+  document.getElementById("techRow").innerHTML = `
+    <div class="tech-card">
+      <div class="tech-label">RSI (14) — Estimated</div>
+      <div class="tech-main" style="color:${rsiM.color}">${rsi}</div>
+      <div class="rsi-bar-wrap"><div class="rsi-bar" style="width:${rsi}%;background:${rsiM.color}"></div></div>
+      <div class="tech-sub" style="color:${rsiM.color}">${rsiM.label}</div>
+    </div>
+    <div class="tech-card">
+      <div class="tech-label">Bollinger Bands (20,2)</div>
+      <div style="font-size:13px;font-weight:700;margin:6px 0;color:${bb.pos==="upper"?"var(--danger)":bb.pos==="lower"?"var(--accent2)":"var(--warn)"}">${bb.posLabel}</div>
+      <div class="bb-zone">
+        <div class="bb-line"><span>Upper</span><span style="color:var(--danger)">${fmtPrice(bb.upper)}</span></div>
+        <div class="bb-line"><span>Mid</span><span style="color:var(--warn)">${fmtPrice(bb.mid)}</span></div>
+        <div class="bb-line"><span>Lower</span><span style="color:var(--accent2)">${fmtPrice(bb.lower)}</span></div>
+      </div>
+    </div>
+    <div class="tech-card">
+      <div class="tech-label">Volatility</div>
+      <div class="tech-main" style="color:${bb.squeeze?"var(--warn)":"var(--accent3)"}">${bb.squeeze?"SQUEEZING":"EXPANDING"}</div>
+      <div class="tech-sub" style="margin-top:6px">${bb.squeeze?"Breakout imminent — watch direction":"Active momentum in play"}</div>
+      <div class="tech-sub" style="margin-top:4px">Vol/MC: ${(volMcRatio*100).toFixed(1)}%</div>
+    </div>`;
+
+  const pc = phase==="EARLY"?"orange":phase==="MID"?"warn":"red";
+  const sc2 = strategy.includes("BREAKOUT")?"green":strategy==="PULLBACK"?"warn":"red";
+  const rc = riskLevel==="LOW"?"green":riskLevel==="MEDIUM"?"warn":"red";
+  document.getElementById("classifyRow").innerHTML =
+    cc("Phase", phase, pc) + cc("Strategy", strategy, sc2) +
+    cc("Risk Level", riskLevel, rc) + cc("Mode", isMgmt?"MANAGEMENT":"PLANNING", isMgmt?"orange":"green");
+
+  document.getElementById("entryModeLabel").textContent = isMgmt ? "Your Entry Price" : "Suggested Entry";
+  document.getElementById("entryNote").textContent = isMgmt
+    ? "Provided — management mode active"
+    : "Structure-based — NOT current price (" + fmtPrice(price) + ")";
+  document.getElementById("entryPriceVal").textContent = fmtPrice(entry);
+
+  document.getElementById("positionRow").innerHTML =
+    sc("Stop Loss", fmtPrice(sl), "red") +
+    sc("Position Size", posSize.toFixed(0) + " tokens") +
+    sc("Capital Used", "$" + capUsed.toFixed(2)) +
+    sc("Risk Exposure", "$" + riskExp.toFixed(2), "warn") +
+    sc("Risk %", riskPct.toFixed(1) + "%", "warn") +
+    sc("SL Distance", ((entry-sl)/entry*100).toFixed(1) + "% below", "red");
+
+  document.getElementById("tpBody").innerHTML = tps.map(t => {
+    if (!t.mult) return `<tr class="moon-row">
+      <td style="color:var(--accent);font-weight:600">Moon Bag</td>
+      <td style="color:var(--muted)">HOLD</td>
+      <td>${(t.pct*100).toFixed(0)}%</td>
+      <td>${t.tokens.toFixed(0)}</td>
+      <td style="color:var(--muted)">—</td>
+      <td style="color:var(--accent)">∞</td></tr>`;
+    return `<tr>
+      <td style="font-weight:600">${t.label}</td>
+      <td style="color:var(--accent2);font-weight:600">${fmtPrice(t.tpPrice)}</td>
+      <td>${(t.pct*100).toFixed(0)}%</td>
+      <td>${t.tokens.toFixed(0)}</td>
+      <td style="color:var(--accent2);font-weight:600">$${t.usd.toFixed(2)}</td>
+      <td style="color:var(--accent3);font-weight:600">+$${t.profit.toFixed(2)}</td></tr>`;
+  }).join("");
+
+  const eSection = !isMgmt ? `
+    <div class="rules-title">Entry Confirmations</div>
+    ${ri(ai.entryConfirm1,"green")}${ri(ai.entryConfirm2,"green")}${ri(ai.entryConfirm3,"green")}
+    <div class="divider"></div>` : "";
+
+  document.getElementById("rulesBlock").innerHTML = `<div class="rules-block">
+    ${eSection}
+    <div class="rules-title">Stop Loss & Exit Rules</div>
+    ${ri(ai.slRule,"warn")}${ri(ai.exitTrigger1,"red")}${ri(ai.exitTrigger2,"red")}
+    <div class="divider"></div>
+    <div class="rules-title">Fake Breakout Detector</div>
+    ${ri(ai.fakeBreakout1)}${ri(ai.fakeBreakout2)}${ri(ai.fakeBreakout3)}
+    ${ri("Volume spike collapses within 2 candles — never chase")}
+  </div>`;
+
+  document.getElementById("reentryBlock").innerHTML = `<div class="rules-block">
+    ${ri("Support zone: " + ai.reentrySupport,"warn")}
+    ${ri("Condition: " + ai.reentryCondition,"green")}
+    ${ri("Structure must hold on re-test — no blind entries","green")}
+  </div>`;
+
+  document.getElementById("verdictText").textContent = ai.verdict;
+
+  document.getElementById("loadingBar").classList.remove("visible");
+  document.getElementById("outputPanel").classList.add("visible");
+  document.getElementById("execBtn").disabled = false;
+}
+</script>
+</body>
+</html>
